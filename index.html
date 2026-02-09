@@ -65,13 +65,25 @@
 	<button class="jump-button" id="jumpBtn"></button>
 
 	<script>
-		// Pre-load the audio so there's no delay on first click
-		const audio = new Audio('mariojump.mp3');
+		// Use Web Audio API for instant, lag-free playback on mobile and desktop
+		const AudioCtx = window.AudioContext || window.webkitAudioContext;
+		const ctx = new AudioCtx();
+		let audioBuffer = null;
+
+		// Pre-fetch and decode the audio so it's ready before the first tap
+		fetch('mariojump.mp3')
+			.then(res => res.arrayBuffer())
+			.then(buf => ctx.decodeAudioData(buf))
+			.then(decoded => { audioBuffer = decoded; });
 
 		document.getElementById('jumpBtn').addEventListener('click', () => {
-			// Reset to start so rapid clicks always play the sound
-			audio.currentTime = 0;
-			audio.play();
+			// Resume context if suspended (required by mobile browsers on first gesture)
+			if (ctx.state === 'suspended') ctx.resume();
+			if (!audioBuffer) return;
+			const source = ctx.createBufferSource();
+			source.buffer = audioBuffer;
+			source.connect(ctx.destination);
+			source.start(0);
 		});
 	</script>
 </body>
